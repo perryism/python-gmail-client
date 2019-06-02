@@ -8,18 +8,14 @@ App password can be generated here
 https://myaccount.google.com/apppasswords
 
 Example:
-e = Gmail('subject', receiver, sender)
-e.text("This is a text body")
-e.html("<h1>This is a html body</h1>")
-e.add_attachment(html, "result.html")
-e.add_attachment(html, "result2.html")
-e.send()
-"""
-class Gmail:
-    def __init__(self, subject, receiver, sender):
-        if os.environ['GMAIL_APP'] is None:
-            raise "GMAIL_APP is not found in enviroment"
+mail = Mail('test subject', 'perryism@gmail.com', 'perryism@gmail.com')
+mail.text("Hello world!")
 
+with Gmail('perryism@gmail.com', os.environ['GMAIL_APP']) as g:
+    g.send(mail)"""
+
+class Mail:
+    def __init__(self, subject, sender, receiver):
         outer = MIMEMultipart('alternative')
         outer['Subject'] = subject
         outer['From'] = sender
@@ -41,10 +37,38 @@ class Gmail:
         msg.add_header('Content-Disposition', 'attachment', filename=filename)
         self.outer.attach(msg)
 
-    def send(self):
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(self.sender, os.environ['GMAIL_APP'])
+    def __str__(self):
+        return self.outer.as_string()
 
-        server.sendmail(self.sender, self.receiver, self.outer.as_string())
-        server.quit()
+class Gmail:
+    @staticmethod
+    def instance():
+       if os.environ['GMAIL_APP'] is None:
+            raise "GMAIL_APP is not found in enviroment"
+
+       return Gmail(os.environ['GMAIL_APP'])
+
+    def __init__(self, username, token):
+        self.server = smtplib.SMTP('smtp.gmail.com', 587)
+        self.server.starttls()
+        self.server.login(username, token)
+
+    def send(self, mail):
+        self.server.sendmail(mail.sender, mail.receiver, str(mail))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._quit()
+
+    def _quit(self):
+        self.server.quit()
+
+
+if __name__ == "__main__":
+    mail = Mail('test subject', 'perryism@gmail.com', 'perryism@gmail.com')
+    mail.text("Hello world!")
+
+    with Gmail('perryism@gmail.com', os.environ['GMAIL_APP']) as g:
+        g.send(mail)

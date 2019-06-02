@@ -1,1 +1,1 @@
-from gmail import Gmail
+from .gmail import Gmail, Mail
